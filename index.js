@@ -20,6 +20,14 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 // nada aqui precisa ser alterado.
 
 const modulesPath = path.join(__dirname, "modules");
+
+if (!fs.existsSync(modulesPath)) {
+    console.error("❌ Pasta 'modules' não encontrada em: " + modulesPath);
+    console.error("   O bot precisa das pastas 'modules/' e 'utils/' junto com o index.js.");
+    console.error("   Ao hospedar, envie o projeto COMPLETO (todas as pastas), não só os arquivos da raiz.");
+    process.exit(1);
+}
+
 const modules = fs.readdirSync(modulesPath)
     .filter(f => f.endsWith(".js"))
     .map(f => require(path.join(modulesPath, f)));
