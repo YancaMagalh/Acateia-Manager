@@ -63,6 +63,8 @@ async function abrirModalFarm(interaction) {
 }
 
 async function processarModalFarm(interaction) {
+    await interaction.deferReply({ ephemeral: true });
+
     const item = interaction.customId.replace("modal_farm_", "");
     const itemInfo = config.itensFarm.find(i => i.value === item) || { label: item, emoji: "📦" };
 
@@ -71,7 +73,7 @@ async function processarModalFarm(interaction) {
     const quantidade = parseInt(quantidadeTexto, 10);
 
     if (isNaN(quantidade) || quantidade <= 0) {
-        return interaction.reply({ content: "❌ Quantidade inválida. Informe um número maior que zero.", ephemeral: true });
+        return interaction.editReply({ content: "❌ Quantidade inválida. Informe um número maior que zero." });
     }
 
     const db = getDB();
@@ -95,7 +97,7 @@ async function processarModalFarm(interaction) {
         );
 
     await enviarLog(interaction.client, config.canais.logFarm, embed);
-    return interaction.reply({ content: "✅ Entrega registrada com sucesso.", ephemeral: true });
+    return interaction.editReply({ content: "✅ Entrega registrada com sucesso." });
 }
 
 // ---------------------------------------------------------

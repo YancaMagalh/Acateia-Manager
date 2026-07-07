@@ -66,6 +66,9 @@ async function abrirModalEntrada(interaction) {
 }
 
 async function processarModalEntrada(interaction) {
+    // Confirma o envio imediatamente para não estourar o prazo de 3s
+    await interaction.deferReply({ ephemeral: true });
+
     const nome = interaction.fields.getTextInputValue("nome").trim();
     const passaporte = interaction.fields.getTextInputValue("passaporte").trim();
     const telefone = interaction.fields.getTextInputValue("telefone").trim();
@@ -75,10 +78,10 @@ async function processarModalEntrada(interaction) {
 
     const existente = db.membros[passaporte];
     if (existente && existente.status === "pendente") {
-        return interaction.reply({ content: "⚠️ Já existe um registro **pendente** com esse passaporte.", ephemeral: true });
+        return interaction.editReply({ content: "⚠️ Já existe um registro **pendente** com esse passaporte." });
     }
     if (existente && existente.status === "aprovado") {
-        return interaction.reply({ content: "⚠️ Esse passaporte já está **registrado e aprovado**.", ephemeral: true });
+        return interaction.editReply({ content: "⚠️ Esse passaporte já está **registrado e aprovado**." });
     }
 
     db.membros[passaporte] = {
@@ -114,7 +117,7 @@ async function processarModalEntrada(interaction) {
 
     await enviarLog(interaction.client, config.canais.aprovacaoRegistro, embed, [row]);
 
-    return interaction.reply({ content: "✅ Registro enviado! Aguarde a aprovação da staff.", ephemeral: true });
+    return interaction.editReply({ content: "✅ Registro enviado! Aguarde a aprovação da staff." });
 }
 
 // ---------------------------------------------------------
@@ -124,18 +127,29 @@ async function processarModalEntrada(interaction) {
 async function aprovarRegistro(interaction) {
     if (!isStaff(interaction.member)) return semPermissao(interaction);
 
+    // Confirma o clique IMEDIATAMENTE (evita "Esta interação falhou"
+    // se as etapas seguintes demorarem mais de 3 segundos)
+    await interaction.deferUpdate();
+
     const passaporte = interaction.customId.replace("aprovar_", "");
     const db = getDB();
     const membro = db.membros[passaporte];
 
-    if (!membro) return interaction.reply({ content: "❌ Registro não encontrado no banco de dados.", ephemeral: true });
+    if (!membro) {
+        return interaction.followUp({ content: "❌ Registro não encontrado no banco de dados. (O arquivo de dados pode ter sido apagado em um redeploy da hospedagem.)", ephemeral: true });
+    }
 
     membro.status = "aprovado";
     saveDB(db);
 
     if (config.cargos.membro) {
         const guildMember = await interaction.guild.members.fetch(membro.discordId).catch(() => null);
-        if (guildMember) await guildMember.roles.add(config.cargos.membro).catch(() => {});
+        if (guildMember) {
+            const ok = await guildMember.roles.add(config.cargos.membro).then(() => true).catch(() => false);
+            if (!ok) {
+                await interaction.followUp({ content: "⚠️ Registro aprovado, mas não consegui adicionar o cargo. Verifique se o cargo do bot está ACIMA do cargo de membro e se ele tem a permissão 'Gerenciar Cargos'.", ephemeral: true }).catch(() => {});
+            }
+        }
     }
 
     const embedAtualizado = baseEmbed(config.cores.sucesso)
@@ -147,7 +161,7 @@ async function aprovarRegistro(interaction) {
             { name: "✅ Aprovado por", value: `<@${interaction.user.id}>` }
         );
 
-    await interaction.update({ embeds: [embedAtualizado], components: [] });
+    await interaction.editReply({ embeds: [embedAtualizado], components: [] });
     await enviarLog(interaction.client, config.canais.logRegistro, embedAtualizado);
 
     const usuario = await interaction.client.users.fetch(membro.discordId).catch(() => null);
@@ -167,12 +181,14 @@ async function abrirModalReprovacao(interaction) {
 }
 
 async function processarModalReprovacao(interaction) {
+    await interaction.deferUpdate();
+
     const passaporte = interaction.customId.replace("modal_reprovar_", "");
     const motivo = interaction.fields.getTextInputValue("motivo").trim();
 
     const db = getDB();
     const membro = db.membros[passaporte];
-    if (!membro) return interaction.reply({ content: "❌ Registro não encontrado.", ephemeral: true });
+    if (!membro) return interaction.followUp({ content: "❌ Registro não encontrado.", ephemeral: true });
 
     membro.status = "reprovado";
     saveDB(db);
@@ -186,7 +202,7 @@ async function processarModalReprovacao(interaction) {
             { name: "📄 Motivo", value: motivo }
         );
 
-    await interaction.update({ embeds: [embedAtualizado], components: [] });
+    await interaction.editReply({ embeds: [embedAtualizado], components: [] });
     await enviarLog(interaction.client, config.canais.logRegistro, embedAtualizado);
 
     const usuario = await interaction.client.users.fetch(membro.discordId).catch(() => null);
@@ -212,6 +228,8 @@ async function abrirModalSaida(interaction) {
 }
 
 async function processarModalSaida(interaction) {
+    await interaction.deferReply({ ephemeral: true });
+
     const passaporte = interaction.fields.getTextInputValue("passaporte").trim();
     const motivo = interaction.fields.getTextInputValue("motivo").trim();
 
@@ -219,7 +237,7 @@ async function processarModalSaida(interaction) {
     const membro = db.membros[passaporte];
 
     if (!membro || membro.status !== "aprovado") {
-        return interaction.reply({ content: "❌ Nenhum membro **aprovado** encontrado com esse passaporte.", ephemeral: true });
+        return interaction.editReply({ content: "❌ Nenhum membro **aprovado** encontrado com esse passaporte." });
     }
 
     membro.status = "saiu";
@@ -242,7 +260,7 @@ async function processarModalSaida(interaction) {
         );
 
     await enviarLog(interaction.client, config.canais.logSaida, embed);
-    return interaction.reply({ content: "✅ Saída registrada com sucesso.", ephemeral: true });
+    return interaction.editReply({ content: "✅ Saída registrada com sucesso." });
 }
 
 // ---------------------------------------------------------

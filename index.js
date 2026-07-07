@@ -83,14 +83,21 @@ client.on("interactionCreate", async (interaction) => {
             return;
         }
     } catch (error) {
-        console.error("Erro ao processar interação:", error);
-        if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-            interaction.reply({ content: "❌ Ocorreu um erro ao processar essa ação.", ephemeral: true }).catch(() => {});
+        const origem = interaction.customId || interaction.commandName || "desconhecida";
+        console.error(`❌ Erro ao processar interação [${origem}]:`, error);
+
+        const msgErro = { content: "❌ Ocorreu um erro ao processar essa ação.", ephemeral: true };
+        if (interaction.isRepliable()) {
+            if (interaction.deferred || interaction.replied) {
+                interaction.followUp(msgErro).catch(() => {});
+            } else {
+                interaction.reply(msgErro).catch(() => {});
+            }
         }
     }
 });
 
-client.once("ready", () => {
+client.once("clientReady", () => {
     console.log(`🐺 Bot online como ${client.user.tag}`);
 });
 

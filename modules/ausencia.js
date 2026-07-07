@@ -61,6 +61,8 @@ async function abrirModalAusencia(interaction) {
 }
 
 async function processarModalAusencia(interaction) {
+    await interaction.deferReply({ ephemeral: true });
+
     const passaporte = interaction.fields.getTextInputValue("passaporte").trim();
     const periodo = interaction.fields.getTextInputValue("periodo").trim();
     const motivo = interaction.fields.getTextInputValue("motivo").trim();
@@ -75,7 +77,7 @@ async function processarModalAusencia(interaction) {
         );
 
     await enviarLog(interaction.client, config.canais.logAusencia, embed);
-    return interaction.reply({ content: "✅ Solicitação de ausência enviada.", ephemeral: true });
+    return interaction.editReply({ content: "✅ Solicitação de ausência enviada." });
 }
 
 // ---------------------------------------------------------

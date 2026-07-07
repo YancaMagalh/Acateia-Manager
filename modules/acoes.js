@@ -63,6 +63,8 @@ async function abrirModalAcao(interaction) {
 }
 
 async function processarModalAcao(interaction) {
+    await interaction.deferReply({ ephemeral: true });
+
     const tipo = interaction.customId.replace("modal_acao_", "");
     const tipoInfo = config.tiposAcao.find(t => t.value === tipo) || { label: tipo, emoji: "📋" };
 
@@ -86,7 +88,7 @@ async function processarModalAcao(interaction) {
         );
 
     await enviarLog(interaction.client, config.canais.logAcoes, embed);
-    return interaction.reply({ content: "✅ Ação registrada com sucesso.", ephemeral: true });
+    return interaction.editReply({ content: "✅ Ação registrada com sucesso." });
 }
 
 // ---------------------------------------------------------
