@@ -4,7 +4,7 @@ const {
     TextInputBuilder,
     TextInputStyle,
     StringSelectMenuBuilder
-} = require("discord.js");
+, MessageFlags } = require("discord.js");
 
 const config = require("../config");
 const { getDB, saveDB } = require("../database");
@@ -63,7 +63,7 @@ async function abrirModalFarm(interaction) {
 }
 
 async function processarModalFarm(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const item = interaction.customId.replace("modal_farm_", "");
     const itemInfo = config.itensFarm.find(i => i.value === item) || { label: item, emoji: "📦" };

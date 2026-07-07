@@ -1,4 +1,4 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle , MessageFlags } = require("discord.js");
 const config = require("../config");
 const { getDB } = require("../database");
 const { baseEmbed } = require("../utils/helpers");
@@ -41,7 +41,7 @@ async function exibirRanking(interaction) {
         .slice(0, 10);
 
     if (lista.length === 0) {
-        return interaction.reply({ content: "📉 Ainda não há dados suficientes para gerar o ranking.", ephemeral: true });
+        return interaction.reply({ content: "📉 Ainda não há dados suficientes para gerar o ranking.", flags: MessageFlags.Ephemeral });
     }
 
     const medalhas = ["🥇", "🥈", "🥉"];
@@ -54,7 +54,7 @@ async function exibirRanking(interaction) {
         .setDescription(descricao)
         .setFooter({ text: "Pontuação: farm + ações" });
 
-    return interaction.reply({ embeds: [embed], ephemeral: true });
+    return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 }
 
 // ---------------------------------------------------------

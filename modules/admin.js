@@ -5,7 +5,7 @@ const {
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle
-} = require("discord.js");
+, MessageFlags } = require("discord.js");
 
 const config = require("../config");
 const { getDB, saveDB } = require("../database");
@@ -62,7 +62,7 @@ async function processarModalBusca(interaction) {
     const db = getDB();
     const membro = db.membros[passaporte];
 
-    if (!membro) return interaction.reply({ content: "❌ Nenhum membro encontrado com esse passaporte.", ephemeral: true });
+    if (!membro) return interaction.reply({ content: "❌ Nenhum membro encontrado com esse passaporte.", flags: MessageFlags.Ephemeral });
 
     const embed = baseEmbed(config.cores.info)
         .setTitle(`🔍 Ficha de ${membro.nome}`)
@@ -76,7 +76,7 @@ async function processarModalBusca(interaction) {
             { name: "👮 Discord", value: `<@${membro.discordId}>` }
         );
 
-    return interaction.reply({ embeds: [embed], ephemeral: true });
+    return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 }
 
 // ---------------------------------------------------------
@@ -106,7 +106,7 @@ async function exibirEstatisticas(interaction) {
             { name: "📦 Totais de Farm", value: farmTexto }
         );
 
-    return interaction.reply({ embeds: [embed], ephemeral: true });
+    return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 }
 
 // ---------------------------------------------------------
@@ -125,7 +125,7 @@ async function confirmarResetRanking(interaction) {
         new ButtonBuilder().setCustomId("cancelar_reset_ranking").setLabel("Cancelar").setStyle(ButtonStyle.Secondary)
     );
 
-    return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+    return interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
 }
 
 async function executarResetRanking(interaction) {

@@ -4,7 +4,7 @@ const {
     TextInputBuilder,
     TextInputStyle,
     StringSelectMenuBuilder
-} = require("discord.js");
+, MessageFlags } = require("discord.js");
 
 const config = require("../config");
 const { getDB, saveDB } = require("../database");
@@ -63,7 +63,7 @@ async function abrirModalAcao(interaction) {
 }
 
 async function processarModalAcao(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const tipo = interaction.customId.replace("modal_acao_", "");
     const tipoInfo = config.tiposAcao.find(t => t.value === tipo) || { label: tipo, emoji: "📋" };

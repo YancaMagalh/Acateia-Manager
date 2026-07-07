@@ -5,7 +5,7 @@ const {
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle
-} = require("discord.js");
+, MessageFlags } = require("discord.js");
 
 const config = require("../config");
 const { baseEmbed, enviarLog } = require("../utils/helpers");
@@ -61,7 +61,7 @@ async function abrirModalAusencia(interaction) {
 }
 
 async function processarModalAusencia(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const passaporte = interaction.fields.getTextInputValue("passaporte").trim();
     const periodo = interaction.fields.getTextInputValue("periodo").trim();

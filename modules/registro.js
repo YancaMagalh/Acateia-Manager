@@ -5,7 +5,7 @@ const {
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle
-} = require("discord.js");
+, MessageFlags } = require("discord.js");
 
 const config = require("../config");
 const { getDB, saveDB } = require("../database");
@@ -67,7 +67,7 @@ async function abrirModalEntrada(interaction) {
 
 async function processarModalEntrada(interaction) {
     // Confirma o envio imediatamente para não estourar o prazo de 3s
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const nome = interaction.fields.getTextInputValue("nome").trim();
     const passaporte = interaction.fields.getTextInputValue("passaporte").trim();
@@ -136,7 +136,7 @@ async function aprovarRegistro(interaction) {
     const membro = db.membros[passaporte];
 
     if (!membro) {
-        return interaction.followUp({ content: "❌ Registro não encontrado no banco de dados. (O arquivo de dados pode ter sido apagado em um redeploy da hospedagem.)", ephemeral: true });
+        return interaction.followUp({ content: "❌ Registro não encontrado no banco de dados. (O arquivo de dados pode ter sido apagado em um redeploy da hospedagem.)", flags: MessageFlags.Ephemeral });
     }
 
     membro.status = "aprovado";
@@ -147,7 +147,7 @@ async function aprovarRegistro(interaction) {
         if (guildMember) {
             const ok = await guildMember.roles.add(config.cargos.membro).then(() => true).catch(() => false);
             if (!ok) {
-                await interaction.followUp({ content: "⚠️ Registro aprovado, mas não consegui adicionar o cargo. Verifique se o cargo do bot está ACIMA do cargo de membro e se ele tem a permissão 'Gerenciar Cargos'.", ephemeral: true }).catch(() => {});
+                await interaction.followUp({ content: "⚠️ Registro aprovado, mas não consegui adicionar o cargo. Verifique se o cargo do bot está ACIMA do cargo de membro e se ele tem a permissão 'Gerenciar Cargos'.", flags: MessageFlags.Ephemeral }).catch(() => {});
             }
         }
     }
@@ -188,7 +188,7 @@ async function processarModalReprovacao(interaction) {
 
     const db = getDB();
     const membro = db.membros[passaporte];
-    if (!membro) return interaction.followUp({ content: "❌ Registro não encontrado.", ephemeral: true });
+    if (!membro) return interaction.followUp({ content: "❌ Registro não encontrado.", flags: MessageFlags.Ephemeral });
 
     membro.status = "reprovado";
     saveDB(db);
@@ -228,7 +228,7 @@ async function abrirModalSaida(interaction) {
 }
 
 async function processarModalSaida(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const passaporte = interaction.fields.getTextInputValue("passaporte").trim();
     const motivo = interaction.fields.getTextInputValue("motivo").trim();

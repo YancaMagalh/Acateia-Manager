@@ -1,4 +1,4 @@
-const { EmbedBuilder, PermissionFlagsBits } = require("discord.js");
+const { EmbedBuilder, PermissionFlagsBits , MessageFlags } = require("discord.js");
 const config = require("../config");
 
 /** Verifica se o membro é staff (cargo configurado ou Administrador) */
@@ -24,7 +24,7 @@ async function enviarLog(client, canalId, embed, components = []) {
 function semPermissao(interaction) {
     return interaction.reply({
         content: "⛔ Você não tem permissão para usar esta ação.",
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
     });
 }
 
