@@ -1,35 +1,63 @@
-# Acateia Bot
+# Acateia Bot (v2 — arquitetura modular)
 
-Bot de gerenciamento completo para a Alcateia: registro (entrada/saída com aprovação),
-ações, farm/entregas, ausências, ranking e painel de administração.
+Cada painel agora é um **módulo independente**, num arquivo próprio. O `index.js`
+não tem mais nenhuma lógica de painel — ele só carrega tudo de `/modules` e roteia
+as interações para o módulo certo.
 
 ## Estrutura
 
 ```
 acateia-bot/
-├── index.js             → lógica principal (painel, botões, modais, ações)
-├── config.js             → IDs de cargos/canais e listas configuráveis
-├── database.js           → persistência simples em data/data.json
-├── deploy-commands.js    → registra o comando /painel no servidor
-├── package.json
-└── .env.example
+├── index.js               → carrega os módulos e roteia interações (genérico)
+├── deploy-commands.js      → registra os slash commands lidos de cada módulo
+├── config.js               → IDs de cargos/canais e listas configuráveis
+├── database.js             → persistência simples em data/data.json
+├── utils/
+│   └── helpers.js          → isStaff, baseEmbed, enviarLog, semPermissao
+└── modules/
+    ├── registro.js          → painel + entrada/saída + aprovação/reprovação
+    ├── acoes.js             → painel + registro de ações
+    ├── farm.js              → painel + registro de entregas
+    ├── ausencia.js          → painel + solicitação de ausência
+    ├── ranking.js           → painel + exibição do ranking
+    ├── admin.js             → painel + busca/estatísticas/reset
+    └── hub.js               → painel principal opcional (atalhos ephemeral)
 ```
+
+## Como funciona o roteamento
+
+Cada módulo em `/modules` exporta um "contrato" padrão:
+
+```js
+module.exports = {
+    commandDescriptions: { "painel-x": "descrição do comando" },
+    commands: { "painel-x": sendPanel },        // slash command → função
+    buttons: { "custom_id": handler },           // botão → função
+    buttonPrefixes: [["prefixo_", handler]],     // botões com id dinâmico (ex: aprovar_123)
+    selects: { "custom_id": handler },           // select menu → função
+    modals: { "custom_id": handler },            // modal → função
+    modalPrefixes: [["prefixo_", handler]]       // modais com id dinâmico
+};
+```
+
+O `index.js` lê todos os arquivos de `/modules` automaticamente e usa esse
+contrato para rotear cada interação. **Para criar um painel novo, basta criar
+um arquivo em `/modules` seguindo esse formato — nada em `index.js` precisa
+mudar.**
 
 ## Instalação
 
 1. Renomeie `.env.example` para `.env` e preencha:
-   - `TOKEN` e `CLIENT_ID` (Discord Developer Portal → sua aplicação)
-   - `GUILD_ID` (ID do seu servidor)
-   - `CARGO_STAFF_ID` (cargo que pode aprovar/reprovar registros e usar o painel admin)
-   - `CARGO_MEMBRO_ID` (cargo dado automaticamente quando um registro é aprovado)
-   - Os IDs dos canais (`CANAL_PAINEL_ID`, `CANAL_APROVACAO_ID`, `CANAL_LOG_*`)
+   - `TOKEN`, `CLIENT_ID`, `GUILD_ID`
+   - `CARGO_STAFF_ID`, `CARGO_MEMBRO_ID`
+   - Os IDs dos canais (`CANAL_APROVACAO_ID`, `CANAL_LOG_*`, etc.)
 
 2. Instale as dependências:
    ```
    npm install
    ```
 
-3. Registre o comando de barra:
+3. Registre os comandos (lidos automaticamente de cada módulo):
    ```
    npm run deploy
    ```
@@ -39,47 +67,40 @@ acateia-bot/
    npm start
    ```
 
-5. Agora você tem dois jeitos de usar:
+5. Em **cada canal**, rode o comando do painel correspondente (precisa de
+   permissão de Administrador para rodar o comando; os botões/menus ficam
+   visíveis e utilizáveis por qualquer membro depois):
 
-   - **Hub único:** use `/painel` em um canal para enviar o painel com todos os
-     módulos juntos (Registro, Ações, Farm, Ausências, Ranking, Administração).
-
-   - **Um painel por canal (recomendado se você já separou os canais):**
-     rode o comando correspondente **dentro de cada canal**:
-     - `/painel-registro` → botões Entrada/Saída fixos no canal
-     - `/painel-acoes` → menu de tipos de ação fixo no canal
-     - `/painel-farm` → menu de itens de farm fixo no canal
-     - `/painel-ausencia` → botão "Solicitar Ausência" fixo no canal
-     - `/painel-ranking` → botão "Ver Ranking" fixo no canal
-     - `/painel-admin` → botão "Abrir Painel Admin" fixo no canal (só staff consegue usar)
-
-   Todos exigem permissão de Administrador para serem executados, mas os
-   botões/menus que eles enviam ficam visíveis e utilizáveis por qualquer
-   membro no canal (as permissões internas de staff continuam sendo checadas
-   normalmente, ex: aprovar registro, admin, etc).
+   | Canal          | Comando             |
+   |----------------|----------------------|
+   | #registro      | `/painel-registro`  |
+   | #ações         | `/painel-acoes`     |
+   | #farm          | `/painel-farm`      |
+   | #ausências     | `/painel-ausencia`  |
+   | #ranking       | `/painel-ranking`   |
+   | #administração | `/painel-admin`     |
+   | #geral (opcional) | `/painel` (hub com atalhos para tudo) |
 
 ## Módulos
 
-- **Registro** → Entrada (nome, passaporte, telefone, quem recrutou) envia para o
-  canal de aprovação com botões Aprovar/Reprovar. Aprovar dá o cargo de membro
-  automaticamente; reprovar pede um motivo e avisa o usuário por DM.
-- **Saída** → registra saída por passaporte + motivo e remove o cargo de membro.
-- **Ações** → menu de seleção (Patrulha, Abordagem, Prisão, Apreensão, Confronto,
-  Outra) abre um modal para detalhar a ocorrência e soma pontos no ranking.
-- **Farm** → menu de seleção de itens, modal pede passaporte + quantidade,
-  mantém total acumulado por item e soma pontos no ranking.
-- **Ausências** → modal simples (passaporte, período, motivo) registrado em canal
-  próprio.
-- **Ranking** → top 10 por pontuação (farm + ações), calculado a partir do banco.
-- **Administração** (somente staff) → buscar ficha de membro por passaporte, ver
-  estatísticas gerais e resetar o ranking (com confirmação).
+- **Registro** → Entrada (nome, passaporte, telefone, quem recrutou) envia para
+  o canal de aprovação com botões Aprovar/Reprovar. Aprovar dá o cargo de membro
+  automaticamente; reprovar pede motivo e avisa por DM. Saída remove o cargo.
+- **Ações** → menu de tipos (Patrulha, Abordagem, Prisão, Apreensão, Confronto,
+  Outra) → modal de detalhes → log + pontos no ranking.
+- **Farm** → menu de itens → modal de quantidade → total acumulado por item +
+  pontos no ranking.
+- **Ausências** → modal (passaporte, período, motivo) registrado em canal próprio.
+- **Ranking** → top 10 por pontuação (farm + ações).
+- **Administração** (somente staff) → buscar ficha por passaporte, estatísticas
+  gerais e reset de ranking com confirmação.
 
 ## Observações de segurança
 
-- Nunca coloque o `TOKEN` diretamente no código — ele já está isolado em `.env`
-  (que não deve ser commitado; adicione ao `.gitignore`).
-- As ações de aprovar/reprovar e o painel de administração verificam o cargo de
-  staff (ou permissão de Administrador) antes de executar qualquer coisa.
-- Os dados ficam em `data/data.json`. Para uso em produção com muitos membros,
-  o ideal é migrar para um banco real (SQLite/PostgreSQL/MongoDB), mas essa
-  estrutura já funciona bem para servidores de porte pequeno/médio.
+- Nunca coloque o `TOKEN` direto no código — ele fica isolado em `.env`
+  (adicione ao `.gitignore`, não commite esse arquivo).
+- Aprovar/reprovar registros e o painel de administração checam o cargo de
+  staff (ou permissão de Administrador) antes de fazer qualquer coisa.
+- Dados ficam em `data/data.json`. Para servidores grandes, migrar para um
+  banco real (SQLite/PostgreSQL) é recomendado, mas essa estrutura atende bem
+  servidores pequenos/médios.
