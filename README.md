@@ -20,8 +20,7 @@ acateia-bot/
     ├── farm.js              → painel + registro de entregas
     ├── ausencia.js          → painel + solicitação de ausência
     ├── ranking.js           → painel + exibição do ranking
-    ├── admin.js             → painel + busca/estatísticas/reset
-    └── hub.js               → painel principal opcional (atalhos ephemeral)
+    └── admin.js             → painel + busca/estatísticas/reset
 ```
 
 ## Como funciona o roteamento
@@ -79,7 +78,9 @@ mudar.**
    | #ausências     | `/painel-ausencia`  |
    | #ranking       | `/painel-ranking`   |
    | #administração | `/painel-admin`     |
-   | #geral (opcional) | `/painel` (hub com atalhos para tudo) |
+
+   Cada comando envia **apenas o painel daquele módulo**, direto no canal em
+   que foi executado — sem menus intermediários.
 
 ## Módulos
 

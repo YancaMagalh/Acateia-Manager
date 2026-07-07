@@ -16,6 +16,7 @@ const { baseEmbed, enviarLog } = require("../utils/helpers");
 
 async function sendPanel(interaction, opcoes = {}) {
     const embed = baseEmbed(config.cores.principal)
+        .setAuthor({ name: "Alcateia • Ausências", iconURL: interaction.guild?.iconURL() ?? undefined })
         .setTitle("🏖️ Sistema de Ausências")
         .setDescription(
             "Precisa se ausentar da Alcateia por um tempo? 🐾\n\n" +
@@ -28,6 +29,7 @@ async function sendPanel(interaction, opcoes = {}) {
             "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
             "⚠️ Ausências não avisadas podem resultar em advertência ou remoção da matilha."
         )
+        .setThumbnail(interaction.guild?.iconURL() ?? null)
         .setFooter({ text: "Sistema de Ausências da Alcateia" })
         .setTimestamp();
 

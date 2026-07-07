@@ -21,6 +21,7 @@ async function sendPanel(interaction, opcoes = {}) {
         .addOptions(config.itensFarm.map(i => ({ label: i.label, value: i.value, emoji: i.emoji })));
 
     const embed = baseEmbed(config.cores.principal)
+        .setAuthor({ name: "Alcateia • Produção", iconURL: interaction.guild?.iconURL() ?? undefined })
         .setTitle("📦 Sistema de Farm")
         .setDescription(
             "Entregue aqui o que foi produzido para a Alcateia! 🐺\n\n" +
@@ -33,6 +34,7 @@ async function sendPanel(interaction, opcoes = {}) {
             "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
             "⚠️ Informe apenas quantidades reais — entregas falsas serão auditadas."
         )
+        .setThumbnail(interaction.guild?.iconURL() ?? null)
         .setFooter({ text: "Sistema de Farm da Alcateia" })
         .setTimestamp();
 

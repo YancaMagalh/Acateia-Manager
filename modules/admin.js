@@ -13,28 +13,26 @@ const { baseEmbed, isStaff, semPermissao } = require("../utils/helpers");
 
 // ---------------------------------------------------------
 //  Painel (fixo no canal de administração)
+//  Vai direto ao ponto: os botões de ação já ficam no painel.
+//  Qualquer clique é validado por cargo de staff.
 // ---------------------------------------------------------
 
 async function sendPanel(interaction, opcoes = {}) {
     const embed = baseEmbed(config.cores.principal)
-        .setTitle("⚙️ Administração")
-        .setDescription("Ferramentas exclusivas para a staff da Alcateia. Clique abaixo para abrir o painel.")
-        .setFooter({ text: "Acateia Manager" })
-        .setTimestamp();
-
-    const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId("menu_admin").setLabel("Abrir Painel Admin").setEmoji("⚙️").setStyle(ButtonStyle.Secondary)
-    );
-
-    return interaction.reply({ embeds: [embed], components: [row], ...opcoes });
-}
-
-async function abrirPainelAdmin(interaction) {
-    if (!isStaff(interaction.member)) return semPermissao(interaction);
-
-    const embed = baseEmbed(config.cores.principal)
+        .setAuthor({ name: "Alcateia • Administração", iconURL: interaction.guild?.iconURL() ?? undefined })
         .setTitle("⚙️ Painel de Administração")
-        .setDescription("Ferramentas exclusivas para a staff da Alcateia.");
+        .setDescription(
+            "Ferramentas exclusivas para a **staff da Alcateia**. 🐺\n\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
+            "🔍 **Buscar Membro** — consulta a ficha completa pelo passaporte\n" +
+            "📊 **Estatísticas** — membros aprovados, pendentes, saídas e totais de farm\n" +
+            "🗑️ **Resetar Ranking** — zera pontos de farm e ações (com confirmação)\n\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
+            "⚠️ Apenas membros com cargo de staff conseguem usar estes botões."
+        )
+        .setThumbnail(interaction.guild?.iconURL() ?? null)
+        .setFooter({ text: "Sistema de Administração da Alcateia" })
+        .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("admin_buscar").setLabel("Buscar Membro").setEmoji("🔍").setStyle(ButtonStyle.Primary),
@@ -42,7 +40,7 @@ async function abrirPainelAdmin(interaction) {
         new ButtonBuilder().setCustomId("admin_reset_ranking").setLabel("Resetar Ranking").setEmoji("🗑️").setStyle(ButtonStyle.Danger)
     );
 
-    return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+    return interaction.reply({ embeds: [embed], components: [row], ...opcoes });
 }
 
 // ---------------------------------------------------------
@@ -160,7 +158,6 @@ module.exports = {
         "painel-admin": sendPanel
     },
     buttons: {
-        "menu_admin": abrirPainelAdmin,
         "admin_buscar": abrirModalBusca,
         "admin_estatisticas": exibirEstatisticas,
         "admin_reset_ranking": confirmarResetRanking,

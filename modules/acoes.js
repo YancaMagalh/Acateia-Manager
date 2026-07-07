@@ -21,6 +21,7 @@ async function sendPanel(interaction, opcoes = {}) {
         .addOptions(config.tiposAcao.map(t => ({ label: t.label, value: t.value, emoji: t.emoji })));
 
     const embed = baseEmbed(config.cores.principal)
+        .setAuthor({ name: "Alcateia • Operações", iconURL: interaction.guild?.iconURL() ?? undefined })
         .setTitle("⚔️ Sistema de Ações")
         .setDescription(
             "Registre aqui as ações realizadas em nome da Alcateia! 🐺\n\n" +
@@ -33,6 +34,7 @@ async function sendPanel(interaction, opcoes = {}) {
             "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
             "⚠️ Descreva a ocorrência com clareza — registros incompletos podem ser desconsiderados."
         )
+        .setThumbnail(interaction.guild?.iconURL() ?? null)
         .setFooter({ text: "Sistema de Ações da Alcateia" })
         .setTimestamp();
 

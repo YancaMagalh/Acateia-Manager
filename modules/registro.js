@@ -17,6 +17,7 @@ const { baseEmbed, enviarLog, isStaff, semPermissao } = require("../utils/helper
 
 async function sendPanel(interaction, opcoes = {}) {
     const embed = baseEmbed(config.cores.principal)
+        .setAuthor({ name: "Alcateia • Recrutamento", iconURL: interaction.guild?.iconURL() ?? undefined })
         .setTitle("📋 Sistema de Registro")
         .setDescription(
             "Seja muito bem-vindo(a) à Alcateia! 👋\n\n" +
@@ -30,6 +31,7 @@ async function sendPanel(interaction, opcoes = {}) {
             "⚠️ Certifique-se de preencher as informações corretamente para evitar reprovação.\n\n" +
             "Já faz parte da Alcateia e vai sair? Use o botão vermelho **Saída**."
         )
+        .setThumbnail(interaction.guild?.iconURL() ?? null)
         .setFooter({ text: "Sistema de Whitelist e Recrutamento" })
         .setTimestamp();
 

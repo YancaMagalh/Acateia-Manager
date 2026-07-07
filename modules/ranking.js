@@ -9,12 +9,14 @@ const { baseEmbed } = require("../utils/helpers");
 
 async function sendPanel(interaction, opcoes = {}) {
     const embed = baseEmbed(config.cores.principal)
+        .setAuthor({ name: "Alcateia • Ranking", iconURL: interaction.guild?.iconURL() ?? undefined })
         .setTitle("🏆 Ranking da Alcateia")
         .setDescription(
             "Acompanhe aqui quem mais contribuiu com a matilha! 🐺\n\n" +
             "A pontuação é calculada com base nas entregas de **farm** e nas **ações** registradas.\n\n" +
             "Clique no botão abaixo para ver o ranking atualizado."
         )
+        .setThumbnail(interaction.guild?.iconURL() ?? null)
         .setFooter({ text: "Sistema de Ranking da Alcateia" })
         .setTimestamp();
 
