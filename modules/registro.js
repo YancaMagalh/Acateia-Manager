@@ -291,3 +291,142 @@ module.exports = {
     ],
     sendPanel
 };
+async function aprovarRegistro(interaction) {
+
+    console.log("========================================");
+    console.log("🚀 Entrou em aprovarRegistro");
+    console.log("CustomId:", interaction.customId);
+    console.log("Usuário:", interaction.user.tag);
+
+    if (!isStaff(interaction.member)) {
+        console.log("❌ Usuário NÃO possui cargo de staff.");
+        return semPermissao(interaction);
+    }
+
+    console.log("✅ Usuário é staff.");
+
+    await interaction.deferUpdate();
+
+    const passaporte = interaction.customId.replace("aprovar_", "");
+
+    console.log("📄 Passaporte:", passaporte);
+
+    const db = getDB();
+
+    const membro = db.membros[passaporte];
+
+    console.log("👤 Registro encontrado:", membro);
+
+    if (!membro) {
+        console.log("❌ Registro não encontrado.");
+        return interaction.followUp({
+            content: "❌ Registro não encontrado.",
+            ephemeral: true
+        });
+    }
+
+    membro.status = "aprovado";
+
+    console.log("💾 Salvando banco...");
+
+    saveDB(db);
+
+    console.log("✅ Banco salvo.");
+
+    if (config.cargos.membro) {
+
+        console.log("🎖 Cargo configurado:", config.cargos.membro);
+
+        const guildMember = await interaction.guild.members
+            .fetch(membro.discordId)
+            .catch(err => {
+                console.error("Erro ao localizar membro:", err);
+                return null;
+            });
+
+        if (guildMember) {
+
+            console.log("👤 Membro localizado:", guildMember.user.tag);
+
+            try {
+
+                await guildMember.roles.add(config.cargos.membro);
+
+                console.log("✅ Cargo adicionado.");
+
+            } catch (err) {
+
+                console.error("❌ Erro ao adicionar cargo:");
+                console.error(err);
+
+                await interaction.followUp({
+                    content: "⚠️ Não consegui adicionar o cargo automaticamente.",
+                    ephemeral: true
+                }).catch(() => {});
+
+            }
+
+        } else {
+
+            console.log("❌ Não encontrei o membro no servidor.");
+
+        }
+
+    }
+
+    const embedAtualizado = baseEmbed(config.cores.sucesso)
+        .setTitle("🟢 Registro Aprovado")
+        .addFields(
+            {
+                name: "👤 Nome",
+                value: membro.nome,
+                inline: true
+            },
+            {
+                name: "🪪 Passaporte",
+                value: membro.passaporte,
+                inline: true
+            },
+            {
+                name: "🤝 Recrutado por",
+                value: membro.recrutador,
+                inline: true
+            },
+            {
+                name: "✅ Aprovado por",
+                value: `<@${interaction.user.id}>`
+            }
+        );
+
+    console.log("📝 Atualizando mensagem...");
+
+    await interaction.message.edit({
+        embeds: [embedAtualizado],
+        components: []
+    });
+
+    console.log("📨 Enviando log...");
+
+    await enviarLog(
+        interaction.client,
+        config.canais.logRegistro,
+        embedAtualizado
+    );
+
+    console.log("📩 Enviando DM...");
+
+    const usuario = await interaction.client.users
+        .fetch(membro.discordId)
+        .catch(() => null);
+
+    if (usuario) {
+
+        await usuario.send({
+            content: `✅ Seu registro foi aprovado! Bem-vindo(a), ${membro.nome}.`
+        }).catch(() => {});
+
+    }
+
+    console.log("🎉 Aprovação concluída com sucesso.");
+
+}
