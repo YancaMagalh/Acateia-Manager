@@ -1,4 +1,4 @@
-# Acateia Bot
+# Alcateia Bot
 
 Bot de gerenciamento completo para a Alcateia: registro (entrada/saída com aprovação),
 ações, farm/entregas, ausências, ranking e painel de administração.
