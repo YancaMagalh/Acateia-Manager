@@ -1,4 +1,4 @@
-# Acateia Bot (v2 — arquitetura modular)
+# Alcateia Bot (v2 — arquitetura modular)
 
 Cada painel agora é um **módulo independente**, num arquivo próprio. O `index.js`
 não tem mais nenhuma lógica de painel — ele só carrega tudo de `/modules` e roteia
