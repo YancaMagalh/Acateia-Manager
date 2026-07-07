@@ -177,12 +177,29 @@ async function aprovarRegistro(interaction) {
     membro.status = "aprovado";
     saveDB(db);
 
-    if (config.cargos.membro) {
+    if (config.cargos.membro || config.formatoApelido) {
         const guildMember = await interaction.guild.members.fetch(membro.discordId).catch(() => null);
+
         if (guildMember) {
-            const ok = await guildMember.roles.add(config.cargos.membro).then(() => true).catch(() => false);
-            if (!ok) {
-                await interaction.followUp({ content: "⚠️ Registro aprovado, mas não consegui adicionar o cargo. Verifique se o cargo do bot está ACIMA do cargo de membro e se ele tem a permissão 'Gerenciar Cargos'.", flags: MessageFlags.Ephemeral }).catch(() => {});
+            // 1) Cargo de membro
+            if (config.cargos.membro) {
+                const okCargo = await guildMember.roles.add(config.cargos.membro).then(() => true).catch(() => false);
+                if (!okCargo) {
+                    await interaction.followUp({ content: "⚠️ Registro aprovado, mas não consegui adicionar o cargo. Verifique se o cargo do bot está ACIMA do cargo de membro e se ele tem a permissão 'Gerenciar Cargos'.", flags: MessageFlags.Ephemeral }).catch(() => {});
+                }
+            }
+
+            // 2) Apelido no padrão da facção (ex: "Kaleesi | 4521")
+            if (config.formatoApelido) {
+                const apelido = config.formatoApelido
+                    .replace("{nome}", membro.nome)
+                    .replace("{passaporte}", membro.passaporte)
+                    .slice(0, 32); // limite do Discord para apelidos
+
+                const okApelido = await guildMember.setNickname(apelido, "Registro aprovado").then(() => true).catch(() => false);
+                if (!okApelido) {
+                    await interaction.followUp({ content: `⚠️ Registro aprovado, mas não consegui alterar o apelido para **${apelido}**. Verifique se o bot tem a permissão 'Gerenciar Apelidos' e se o cargo dele está ACIMA do cargo da pessoa. (O apelido do dono do servidor não pode ser alterado por bots.)`, flags: MessageFlags.Ephemeral }).catch(() => {});
+                }
             }
         }
     }
