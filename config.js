@@ -48,6 +48,10 @@ module.exports = {
         farm: 1
     },
 
+    // Formato do apelido aplicado ao aprovar um registro.
+    // Variáveis disponíveis: {nome} e {passaporte}
+    formatoApelido: "{nome} | {passaporte}",
+
     cores: {
         principal: "#2b2d31",
         sucesso: "Green",
