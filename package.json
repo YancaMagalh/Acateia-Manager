@@ -1,5 +1,5 @@
 {
-  "name": "acateia-bot",
+  "name": "alcateia-bot",
   "version": "1.0.0",
   "description": "Bot de gerenciamento da Alcateia (registro, ações, farm, ausências, ranking e administração)",
   "main": "index.js",
