@@ -3,102 +3,181 @@ const path = require("path");
 const { Client, GatewayIntentBits } = require("discord.js");
 const config = require("./config");
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds]
+});
 
 // =========================================================
-//  CARREGAMENTO DINÂMICO DOS MÓDULOS (um arquivo = um painel)
+// Carregamento dos módulos
 // =========================================================
-// Cada arquivo em /modules exporta seu próprio contrato:
-//   commandDescriptions → { "painel-x": "descrição" }
-//   commands            → { "painel-x": fn(interaction) }
-//   buttons             → { "customId": fn(interaction) }
-//   buttonPrefixes      → [["prefixo_", fn(interaction)], ...]
-//   selects             → { "customId": fn(interaction) }
-//   modals              → { "customId": fn(interaction) }
-//   modalPrefixes       → [["prefixo_", fn(interaction)], ...]
-// Basta adicionar um novo arquivo em /modules para criar um novo painel —
-// nada aqui precisa ser alterado.
 
 const modulesPath = path.join(__dirname, "modules");
 
 if (!fs.existsSync(modulesPath)) {
-    console.error("❌ Pasta 'modules' não encontrada em: " + modulesPath);
-    console.error("   O bot precisa das pastas 'modules/' e 'utils/' junto com o index.js.");
-    console.error("   Ao hospedar, envie o projeto COMPLETO (todas as pastas), não só os arquivos da raiz.");
+    console.error("❌ Pasta modules não encontrada.");
     process.exit(1);
 }
 
 const modules = fs.readdirSync(modulesPath)
-    .filter(f => f.endsWith(".js"))
-    .map(f => require(path.join(modulesPath, f)));
+    .filter(file => file.endsWith(".js"))
+    .map(file => {
+        console.log(`📦 Carregando módulo: ${file}`);
+        return require(path.join(modulesPath, file));
+    });
 
-console.log(`🧩 ${modules.length} módulo(s) carregado(s) de /modules`);
+console.log(`🧩 ${modules.length} módulo(s) carregado(s).`);
 
 // =========================================================
-//  ROTEAMENTO GENÉRICO
+// Localiza o handler
 // =========================================================
 
 function encontrarHandler(tipo, customId) {
-    // 1) match exato
+
     for (const mod of modules) {
-        if (mod[tipo] && mod[tipo][customId]) return mod[tipo][customId];
-    }
-    // 2) match por prefixo (para customIds dinâmicos, ex: aprovar_<passaporte>)
-    const chavePrefixos = `${tipo}Prefixes`;
-    for (const mod of modules) {
-        if (!mod[chavePrefixos]) continue;
-        for (const [prefixo, handler] of mod[chavePrefixos]) {
-            if (customId.startsWith(prefixo)) return handler;
+        if (mod[tipo]?.[customId]) {
+            return mod[tipo][customId];
         }
     }
+
+    const prefixKey = `${tipo}Prefixes`;
+
+    for (const mod of modules) {
+
+        if (!mod[prefixKey]) continue;
+
+        for (const [prefixo, handler] of mod[prefixKey]) {
+
+            if (customId.startsWith(prefixo)) {
+                return handler;
+            }
+
+        }
+
+    }
+
     return null;
 }
 
+// =========================================================
+// Eventos
+// =========================================================
+
+client.once("clientReady", () => {
+    console.log(`🐺 Bot online como ${client.user.tag}`);
+});
+
 client.on("interactionCreate", async (interaction) => {
+
     try {
+
+        console.log("=================================");
+        console.log("Nova interação");
+
         if (interaction.isChatInputCommand()) {
+
+            console.log("Slash:", interaction.commandName);
+
             for (const mod of modules) {
-                if (mod.commands && mod.commands[interaction.commandName]) {
-                    return mod.commands[interaction.commandName](interaction);
+
+                if (mod.commands?.[interaction.commandName]) {
+
+                    console.log("Executando comando");
+
+                    return await mod.commands[interaction.commandName](interaction);
+
                 }
+
             }
+
             return;
         }
 
         if (interaction.isButton()) {
-            const handler = encontrarHandler("buttons", interaction.customId);
-            if (handler) return handler(interaction);
-            return;
+
+            console.log("Botão:", interaction.customId);
+
+            const handler = encontrarHandler(
+                "buttons",
+                interaction.customId
+            );
+
+            if (!handler) {
+
+                console.log("Nenhum handler encontrado.");
+
+                return;
+
+            }
+
+            console.log("Handler encontrado.");
+
+            return await handler(interaction);
+
         }
 
         if (interaction.isStringSelectMenu()) {
-            const handler = encontrarHandler("selects", interaction.customId);
-            if (handler) return handler(interaction);
+
+            console.log("Select:", interaction.customId);
+
+            const handler = encontrarHandler(
+                "selects",
+                interaction.customId
+            );
+
+            if (handler) {
+                return await handler(interaction);
+            }
+
             return;
+
         }
 
         if (interaction.isModalSubmit()) {
-            const handler = encontrarHandler("modals", interaction.customId);
-            if (handler) return handler(interaction);
-            return;
-        }
-    } catch (error) {
-        const origem = interaction.customId || interaction.commandName || "desconhecida";
-        console.error(`❌ Erro ao processar interação [${origem}]:`, error);
 
-        const msgErro = { content: "❌ Ocorreu um erro ao processar essa ação.", ephemeral: true };
-        if (interaction.isRepliable()) {
-            if (interaction.deferred || interaction.replied) {
-                interaction.followUp(msgErro).catch(() => {});
-            } else {
-                interaction.reply(msgErro).catch(() => {});
+            console.log("Modal:", interaction.customId);
+
+            const handler = encontrarHandler(
+                "modals",
+                interaction.customId
+            );
+
+            if (handler) {
+                return await handler(interaction);
             }
-        }
-    }
-});
 
-client.once("clientReady", () => {
-    console.log(`🐺 Bot online como ${client.user.tag}`);
+            return;
+
+        }
+
+    } catch (err) {
+
+        console.error("=================================");
+        console.error("ERRO AO PROCESSAR INTERAÇÃO");
+        console.error(err);
+        console.error(err.stack);
+
+        try {
+
+            if (interaction.deferred || interaction.replied) {
+
+                await interaction.followUp({
+                    content: "❌ Ocorreu um erro interno.",
+                    ephemeral: true
+                });
+
+            } else {
+
+                await interaction.reply({
+                    content: "❌ Ocorreu um erro interno.",
+                    ephemeral: true
+                });
+
+            }
+
+        } catch {}
+
+    }
+
 });
 
 client.login(config.token);
