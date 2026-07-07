@@ -124,6 +124,35 @@ async function processarModalEntrada(interaction) {
 //  Aprovação / Reprovação
 // ---------------------------------------------------------
 
+/**
+ * Reconstrói o registro a partir dos campos do embed de aprovação.
+ * Útil quando o data.json foi apagado (ex: redeploy da hospedagem):
+ * o embed pendente já contém todos os dados necessários.
+ */
+function reconstruirDoEmbed(message, passaporte) {
+    const embed = message?.embeds?.[0];
+    if (!embed || !embed.fields) return null;
+
+    const campo = (parte) => embed.fields.find(f => f.name.includes(parte))?.value ?? "n/a";
+
+    const discordRaw = campo("Discord");
+    const discordId = (discordRaw.match(/\d{15,}/) || [null])[0];
+    if (!discordId) return null;
+
+    return {
+        nome: campo("Nome"),
+        passaporte,
+        telefone: campo("Telefone"),
+        recrutador: campo("Recrutado"),
+        discordId,
+        status: "pendente",
+        entradaEm: Date.now(),
+        saidaEm: null,
+        pontosFarm: 0,
+        acoes: 0
+    };
+}
+
 async function aprovarRegistro(interaction) {
     if (!isStaff(interaction.member)) return semPermissao(interaction);
 
@@ -133,21 +162,44 @@ async function aprovarRegistro(interaction) {
 
     const passaporte = interaction.customId.replace("aprovar_", "");
     const db = getDB();
-    const membro = db.membros[passaporte];
+    let membro = db.membros[passaporte];
+
+    // Fallback: se o banco foi apagado (redeploy), reconstrói do próprio embed
+    if (!membro) {
+        membro = reconstruirDoEmbed(interaction.message, passaporte);
+        if (membro) db.membros[passaporte] = membro;
+    }
 
     if (!membro) {
-        return interaction.followUp({ content: "❌ Registro não encontrado no banco de dados. (O arquivo de dados pode ter sido apagado em um redeploy da hospedagem.)", flags: MessageFlags.Ephemeral });
+        return interaction.followUp({ content: "❌ Registro não encontrado e não foi possível recuperar os dados do embed. Peça para a pessoa refazer o registro.", flags: MessageFlags.Ephemeral });
     }
 
     membro.status = "aprovado";
     saveDB(db);
 
-    if (config.cargos.membro) {
+    if (config.cargos.membro || config.formatoApelido) {
         const guildMember = await interaction.guild.members.fetch(membro.discordId).catch(() => null);
+
         if (guildMember) {
-            const ok = await guildMember.roles.add(config.cargos.membro).then(() => true).catch(() => false);
-            if (!ok) {
-                await interaction.followUp({ content: "⚠️ Registro aprovado, mas não consegui adicionar o cargo. Verifique se o cargo do bot está ACIMA do cargo de membro e se ele tem a permissão 'Gerenciar Cargos'.", flags: MessageFlags.Ephemeral }).catch(() => {});
+            // 1) Cargo de membro
+            if (config.cargos.membro) {
+                const okCargo = await guildMember.roles.add(config.cargos.membro).then(() => true).catch(() => false);
+                if (!okCargo) {
+                    await interaction.followUp({ content: "⚠️ Registro aprovado, mas não consegui adicionar o cargo. Verifique se o cargo do bot está ACIMA do cargo de membro e se ele tem a permissão 'Gerenciar Cargos'.", flags: MessageFlags.Ephemeral }).catch(() => {});
+                }
+            }
+
+            // 2) Apelido no padrão da facção (ex: "Kaleesi | 4521")
+            if (config.formatoApelido) {
+                const apelido = config.formatoApelido
+                    .replace("{nome}", membro.nome)
+                    .replace("{passaporte}", membro.passaporte)
+                    .slice(0, 32); // limite do Discord para apelidos
+
+                const okApelido = await guildMember.setNickname(apelido, "Registro aprovado").then(() => true).catch(() => false);
+                if (!okApelido) {
+                    await interaction.followUp({ content: `⚠️ Registro aprovado, mas não consegui alterar o apelido para **${apelido}**. Verifique se o bot tem a permissão 'Gerenciar Apelidos' e se o cargo dele está ACIMA do cargo da pessoa. (O apelido do dono do servidor não pode ser alterado por bots.)`, flags: MessageFlags.Ephemeral }).catch(() => {});
+                }
             }
         }
     }
@@ -187,8 +239,15 @@ async function processarModalReprovacao(interaction) {
     const motivo = interaction.fields.getTextInputValue("motivo").trim();
 
     const db = getDB();
-    const membro = db.membros[passaporte];
-    if (!membro) return interaction.followUp({ content: "❌ Registro não encontrado.", flags: MessageFlags.Ephemeral });
+    let membro = db.membros[passaporte];
+
+    // Fallback: se o banco foi apagado (redeploy), reconstrói do próprio embed
+    if (!membro) {
+        membro = reconstruirDoEmbed(interaction.message, passaporte);
+        if (membro) db.membros[passaporte] = membro;
+    }
+
+    if (!membro) return interaction.followUp({ content: "❌ Registro não encontrado e não foi possível recuperar os dados do embed.", flags: MessageFlags.Ephemeral });
 
     membro.status = "reprovado";
     saveDB(db);
@@ -291,142 +350,3 @@ module.exports = {
     ],
     sendPanel
 };
-async function aprovarRegistro(interaction) {
-
-    console.log("========================================");
-    console.log("🚀 Entrou em aprovarRegistro");
-    console.log("CustomId:", interaction.customId);
-    console.log("Usuário:", interaction.user.tag);
-
-    if (!isStaff(interaction.member)) {
-        console.log("❌ Usuário NÃO possui cargo de staff.");
-        return semPermissao(interaction);
-    }
-
-    console.log("✅ Usuário é staff.");
-
-    await interaction.deferUpdate();
-
-    const passaporte = interaction.customId.replace("aprovar_", "");
-
-    console.log("📄 Passaporte:", passaporte);
-
-    const db = getDB();
-
-    const membro = db.membros[passaporte];
-
-    console.log("👤 Registro encontrado:", membro);
-
-    if (!membro) {
-        console.log("❌ Registro não encontrado.");
-        return interaction.followUp({
-            content: "❌ Registro não encontrado.",
-            ephemeral: true
-        });
-    }
-
-    membro.status = "aprovado";
-
-    console.log("💾 Salvando banco...");
-
-    saveDB(db);
-
-    console.log("✅ Banco salvo.");
-
-    if (config.cargos.membro) {
-
-        console.log("🎖 Cargo configurado:", config.cargos.membro);
-
-        const guildMember = await interaction.guild.members
-            .fetch(membro.discordId)
-            .catch(err => {
-                console.error("Erro ao localizar membro:", err);
-                return null;
-            });
-
-        if (guildMember) {
-
-            console.log("👤 Membro localizado:", guildMember.user.tag);
-
-            try {
-
-                await guildMember.roles.add(config.cargos.membro);
-
-                console.log("✅ Cargo adicionado.");
-
-            } catch (err) {
-
-                console.error("❌ Erro ao adicionar cargo:");
-                console.error(err);
-
-                await interaction.followUp({
-                    content: "⚠️ Não consegui adicionar o cargo automaticamente.",
-                    ephemeral: true
-                }).catch(() => {});
-
-            }
-
-        } else {
-
-            console.log("❌ Não encontrei o membro no servidor.");
-
-        }
-
-    }
-
-    const embedAtualizado = baseEmbed(config.cores.sucesso)
-        .setTitle("🟢 Registro Aprovado")
-        .addFields(
-            {
-                name: "👤 Nome",
-                value: membro.nome,
-                inline: true
-            },
-            {
-                name: "🪪 Passaporte",
-                value: membro.passaporte,
-                inline: true
-            },
-            {
-                name: "🤝 Recrutado por",
-                value: membro.recrutador,
-                inline: true
-            },
-            {
-                name: "✅ Aprovado por",
-                value: `<@${interaction.user.id}>`
-            }
-        );
-
-    console.log("📝 Atualizando mensagem...");
-
-    await interaction.message.edit({
-        embeds: [embedAtualizado],
-        components: []
-    });
-
-    console.log("📨 Enviando log...");
-
-    await enviarLog(
-        interaction.client,
-        config.canais.logRegistro,
-        embedAtualizado
-    );
-
-    console.log("📩 Enviando DM...");
-
-    const usuario = await interaction.client.users
-        .fetch(membro.discordId)
-        .catch(() => null);
-
-    if (usuario) {
-
-        await usuario.send({
-            content: `✅ Seu registro foi aprovado! Bem-vindo(a), ${membro.nome}.`
-        }).catch(() => {});
-
-    }
-
-    console.log("🎉 Aprovação concluída com sucesso.");
-
-}
